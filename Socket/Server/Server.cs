@@ -38,6 +38,9 @@ internal class Server {
                     // 역직렬화: byte 배열을 string 객체 형태로 변환
                     string str = Encoding.UTF8.GetString(buffer);
                     Console.WriteLine("Client: " + str);
+
+                    // 클라이언트로 데이터 전송
+                    clientSocket.Send(buffer);
                 }
             }
         }

@@ -34,6 +34,20 @@ internal class Client {
 
             // 서버로 데이터 전송
             clientSocket.Send(buffer);
+
+            // 서버로부터 데이터 수신(Echo)
+            byte[] bufferEcho = new byte[256];                  // 데이터 내용이 저장됨
+            int bytesRead = clientSocket.Receive(bufferEcho);   // 데이터 크기(bytes)가 저장됨
+
+            // 받은 데이터가 없으면 연결 종료
+            if (bytesRead < 1) {
+                Console.WriteLine("서버의 연결 종료");
+                return;
+            }
+
+            // 역직렬화: byte 배열을 string 객체 형태로 변환
+            string strEcho = Encoding.UTF8.GetString(bufferEcho);
+            Console.WriteLine("Server: " + strEcho + "\n");
         }
     }
 }
