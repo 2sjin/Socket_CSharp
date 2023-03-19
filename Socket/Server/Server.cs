@@ -1,9 +1,10 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-    
+using System.Text;    
+
 namespace Server;
 
-internal class ServerProgram {
+internal class Server {
     static void Main(string[] args) {
         Console.WriteLine("Server Program\n\n");
 
@@ -21,7 +22,21 @@ internal class ServerProgram {
 
             // 연결 요청 수락, 데이터 통신에 사용할 소켓 생성
             using (Socket clientSocket = serverSocket.Accept()) {
-                Console.WriteLine("연결됨 " + clientSocket.RemoteEndPoint);
+                Console.WriteLine("Client 연결됨(" + clientSocket.RemoteEndPoint + ")");
+
+                // 클라이언트로부터 데이터 수신
+                byte[] buffer = new byte[256];                  // 데이터 내용이 저장됨
+                int totalBytes = clientSocket.Receive(buffer);  // 데이터 크기(bytes)가 저장됨
+
+                // 받은 데이터가 없으면 연결 종료
+                if (totalBytes < 1) {
+                    Console.WriteLine("클라이언트의 연결 종료");
+                    return;
+                }
+
+                // 역직렬화: byte 배열을 string 객체 형태로 변환
+                string str = Encoding.UTF8.GetString(buffer);
+                Console.WriteLine("Client: " + str);
             }
         }
     }
