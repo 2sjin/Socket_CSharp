@@ -27,15 +27,15 @@ internal class Server {
                 while (true) {
                     // 수신해야 할 데이터의 크기를 얻는 과정
                     byte[] headerBuffer = new byte[2];            // 헤더 버퍼
-                    int n1 = clientSocket.Receive(headerBuffer);  // 클라이언트로부터 버퍼의 헤더 부분 받아오기
+                    int ReceiveSizeHeader = clientSocket.Receive(headerBuffer);  // 클라이언트로부터 버퍼의 헤더 부분 받아오기
 
                     // 헤더를 받지 않았으면 연결 종료
-                    if (n1 < 1) {
+                    if (ReceiveSizeHeader < 1) {
                         Console.WriteLine("클라이언트의 연결 종료");
                         return;
                     }
                     // 헤더를 1바이트만 받았을 경우, 나머지 1바이트를 추가로 받아옴
-                    else if (n1 == 1) {
+                    else if (ReceiveSizeHeader == 1) {
                         clientSocket.Receive(headerBuffer, 1, 1, SocketFlags.None);
                     }
 
@@ -46,12 +46,12 @@ internal class Server {
 
                     // 실제 데이터를 얻는 과정
                     byte[] dataBuffer = new byte[dataSize];     // 데이터 버퍼
-                    int receivedBytes = 0;  // 지금까지 받은 데이터의 크기(Bytes)
+                    int totalReceivedSize = 0;  // 지금까지 받은 데이터의 크기(Bytes)
 
                     // 모든 데이터를 받을 때까지, 반복해서 데이터 수신
-                    while (receivedBytes < dataSize) {
-                        int n2 = clientSocket.Receive(dataBuffer, receivedBytes, dataSize-receivedBytes, SocketFlags.None);
-                        receivedBytes += n2;
+                    while (totalReceivedSize < dataSize) {
+                        int ReceiveSizeNow = clientSocket.Receive(dataBuffer, totalReceivedSize, dataSize - totalReceivedSize, SocketFlags.None);
+                        totalReceivedSize += ReceiveSizeNow;
                     }
 
                     // 역직렬화: byte 배열을 객체 형태(문자열)로 변환
