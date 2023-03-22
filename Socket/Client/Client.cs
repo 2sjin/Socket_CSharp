@@ -17,7 +17,7 @@ internal class Client {
             clientSocket.Connect(endPoint);
 
             Console.WriteLine("서버로 전송할 문자열을 입력하세요.");
-            Console.WriteLine("(문자열 없이 [Enter] 입력하면 프로그램 종료)\n");
+            Console.WriteLine("(문자열 없이 [Enter] 입력하면 클라이언트 종료)\n");
 
             while (true) {
                 // 서버로 전송할 문자열 입력
@@ -26,6 +26,7 @@ internal class Client {
 
                 // 문자열 없이 [Enter] 입력 시 프로그램 종료
                 if (str == "") {
+                    Console.WriteLine("클라이언트 종료");
                     return;
                 }
 
