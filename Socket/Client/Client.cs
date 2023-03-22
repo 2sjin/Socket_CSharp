@@ -30,12 +30,20 @@ internal class Client {
                     return;
                 }
 
-                // 직렬화: string 객체를 전송 가능한 byte 배열로 변환
-                byte[] buffer = Encoding.UTF8.GetBytes(str);
+                // 직렬화: 객체(문자열, 정수 등)를 전송 가능한 byte 배열로 변환
+                byte[] strBuffer = Encoding.UTF8.GetBytes(str);         // 실제 데이터
+                byte[] dataSize = BitConverter.GetBytes(IPAddress.HostToNetworkOrder((short)strBuffer.Length));     // 데이터의 크기
+                byte[] newBuffer = new byte[2 + strBuffer.Length];      // 2바이트 헤더를 추가한 새로운 버퍼
+
+                // 새로운 버퍼에 데이터 입력
+                // Array.Copy(복사할 배열, 시작 인덱스, 붙여넣을 배열, 시작 인덱스, 복사할 길이)
+                Array.Copy(dataSize, 0, newBuffer, 0, dataSize.Length);     // 헤더에 데이터의 크기 입력
+                Array.Copy(strBuffer, 0, newBuffer, 2, strBuffer.Length);   // 데이터 입력
 
                 // 서버로 데이터 전송
-                clientSocket.Send(buffer);
+                clientSocket.Send(newBuffer);
 
+                /*
                 // 서버로부터 데이터 수신(Echo)
                 byte[] bufferEcho = new byte[256];                  // 데이터 내용이 저장됨
                 int bytesRead = clientSocket.Receive(bufferEcho);   // 데이터 크기(bytes)가 저장됨
@@ -49,6 +57,7 @@ internal class Client {
                 // 역직렬화: byte 배열을 string 객체 형태로 변환
                 string strEcho = Encoding.UTF8.GetString(bufferEcho);
                 Console.WriteLine("Server: " + strEcho + "\n");
+                */
             }
         }
     }

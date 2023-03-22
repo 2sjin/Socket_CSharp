@@ -25,22 +25,41 @@ internal class Server {
                 Console.WriteLine("Client 연결됨(" + clientSocket.RemoteEndPoint + ")");
 
                 while (true) {
-                    // 클라이언트로부터 데이터 수신
-                    byte[] buffer = new byte[256];                  // 데이터 내용이 저장됨
-                    int totalBytes = clientSocket.Receive(buffer);  // 데이터 크기(bytes)가 저장됨
+                    // 수신해야 할 데이터의 크기를 얻는 과정
+                    byte[] headerBuffer = new byte[2];            // 헤더 버퍼
+                    int n1 = clientSocket.Receive(headerBuffer);  // 클라이언트로부터 버퍼의 헤더 부분 받아오기
 
-                    // 받은 데이터가 없으면 연결 종료
-                    if (totalBytes < 1) {
+                    // 헤더를 받지 않았으면 연결 종료
+                    if (n1 < 1) {
                         Console.WriteLine("클라이언트의 연결 종료");
                         return;
                     }
+                    // 헤더를 1바이트만 받았을 경우, 나머지 1바이트를 추가로 받아옴
+                    else if (n1 == 1) {
+                        clientSocket.Receive(headerBuffer, 1, 1, SocketFlags.None);
+                    }
 
-                    // 역직렬화: byte 배열을 string 객체 형태로 변환
-                    string str = Encoding.UTF8.GetString(buffer);
+                    // 헤더 역직렬화(바이트 배열 -> 정수) 후, 받아야 할 데이터의 크기 저장
+                    short dataSize = IPAddress.NetworkToHostOrder(BitConverter.ToInt16(headerBuffer));
+
+                    //////////////////////////////////////////////////////////////////////////////////////////////
+
+                    // 실제 데이터를 얻는 과정
+                    byte[] dataBuffer = new byte[dataSize];     // 데이터 버퍼
+                    int receivedBytes = 0;  // 지금까지 받은 데이터의 크기(Bytes)
+
+                    // 모든 데이터를 받을 때까지, 반복해서 데이터 수신
+                    while (receivedBytes < dataSize) {
+                        int n2 = clientSocket.Receive(dataBuffer, receivedBytes, dataSize-receivedBytes, SocketFlags.None);
+                        receivedBytes += n2;
+                    }
+
+                    // 역직렬화: byte 배열을 객체 형태(문자열)로 변환
+                    string str = Encoding.UTF8.GetString(dataBuffer);
                     Console.WriteLine("Client: " + str);
 
                     // 클라이언트로 데이터 전송
-                    clientSocket.Send(buffer);
+                    // clientSocket.Send(buffer);
                 }
             }
         }
