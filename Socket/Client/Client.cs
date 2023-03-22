@@ -5,6 +5,9 @@ using System.Text;
 namespace Client;
 
 internal class Client {
+    static readonly IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse("192.168.0.14"), 20000);
+    const int HEADER_SIZE = 2;      // 헤더의 크기
+
     static void Main(string[] args) {
         Console.WriteLine("Client Program\n\n");
 
@@ -13,7 +16,6 @@ internal class Client {
         using (Socket clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)) {
 
             // 클라이언트가 서버에 연결 요청
-            IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse("192.168.0.14"), 20000);
             clientSocket.Connect(endPoint);
 
             Console.WriteLine("서버로 전송할 문자열을 입력하세요.");
@@ -33,12 +35,12 @@ internal class Client {
                 // 직렬화: 객체(문자열, 정수 등)를 전송 가능한 byte 배열로 변환
                 byte[] strBuffer = Encoding.UTF8.GetBytes(str);         // 실제 데이터
                 byte[] dataSize = BitConverter.GetBytes(IPAddress.HostToNetworkOrder((short)strBuffer.Length));     // 데이터의 크기
-                byte[] newBuffer = new byte[2 + strBuffer.Length];      // 2바이트 헤더를 추가한 새로운 버퍼
+                byte[] newBuffer = new byte[HEADER_SIZE + strBuffer.Length];      // 2바이트 헤더를 추가한 새로운 버퍼
 
                 // 새로운 버퍼에 데이터 입력
                 // Array.Copy(복사할 배열, 시작 인덱스, 붙여넣을 배열, 시작 인덱스, 복사할 길이)
                 Array.Copy(dataSize, 0, newBuffer, 0, dataSize.Length);     // 헤더에 데이터의 크기 입력
-                Array.Copy(strBuffer, 0, newBuffer, 2, strBuffer.Length);   // 데이터 입력
+                Array.Copy(strBuffer, 0, newBuffer, HEADER_SIZE, strBuffer.Length);   // 데이터 입력
 
                 // 서버로 데이터 전송
                 clientSocket.Send(newBuffer);

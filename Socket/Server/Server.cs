@@ -5,6 +5,9 @@ using System.Text;
 namespace Server;
 
 internal class Server {
+    static readonly IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse("192.168.0.14"), 20000);
+    const int HEADER_SIZE = 2;      // 헤더의 크기
+
     static void Main(string[] args) {
         Console.WriteLine("Server Program\n\n");
 
@@ -13,7 +16,6 @@ internal class Server {
         using (Socket serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)) {
 
             // 서버 소켓에 IP, Port 할당
-            IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse("192.168.0.14"), 20000);
             serverSocket.Bind(endPoint);
 
             // 클라이언트 연결 요청을 대기하는 상태로 만듦
@@ -26,17 +28,17 @@ internal class Server {
 
                 while (true) {
                     // 수신해야 할 데이터의 크기를 얻는 과정
-                    byte[] headerBuffer = new byte[2];            // 헤더 버퍼
-                    int ReceiveSizeHeader = clientSocket.Receive(headerBuffer);  // 클라이언트로부터 버퍼의 헤더 부분 받아오기
+                    byte[] headerBuffer = new byte[HEADER_SIZE];                // 헤더 버퍼
+                    int ReceiveSizeHeader = clientSocket.Receive(headerBuffer); // 클라이언트로부터 버퍼의 헤더 부분 받아오기
 
                     // 헤더를 받지 않았으면 연결 종료
-                    if (ReceiveSizeHeader < 1) {
+                    if (ReceiveSizeHeader <= 0) {
                         Console.WriteLine("클라이언트의 연결 종료");
                         return;
                     }
-                    // 헤더를 1바이트만 받았을 경우, 나머지 1바이트를 추가로 받아옴
-                    else if (ReceiveSizeHeader == 1) {
-                        clientSocket.Receive(headerBuffer, 1, 1, SocketFlags.None);
+                    // 헤더를 일부만 받았을 경우, 나머지를 추가로 받아옴
+                    else if (ReceiveSizeHeader < HEADER_SIZE) {
+                        clientSocket.Receive(headerBuffer, HEADER_SIZE, HEADER_SIZE-ReceiveSizeHeader, SocketFlags.None);
                     }
 
                     // 헤더 역직렬화(바이트 배열 -> 정수) 후, 받아야 할 데이터의 크기 저장
