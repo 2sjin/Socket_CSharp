@@ -53,21 +53,42 @@ internal class Client {
                 // 서버로 데이터 전송
                 clientSocket.Send(newBuffer, SocketFlags.None);
 
-                /*
-                // 서버로부터 데이터 수신(Echo)
-                byte[] bufferEcho = new byte[256];                  // 데이터 내용이 저장됨
-                int bytesRead = clientSocket.Receive(bufferEcho);   // 데이터 크기(bytes)가 저장됨
+                ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-                // 받은 데이터가 없으면 연결 종료
-                if (bytesRead < 1) {
-                    Console.WriteLine("서버의 연결 종료");
+                // 수신해야 할 데이터의 크기를 얻는 과정
+                byte[] headerBuffer = new byte[HEADER_SIZE];                // 헤더 버퍼
+                int ReceiveSizeHeader = clientSocket.Receive(headerBuffer); // 클라이언트로부터 버퍼의 헤더 부분 받아오기
+
+                // 헤더를 받지 않았으면 연결 종료
+                if (ReceiveSizeHeader <= 0) {
+                    Console.WriteLine("클라이언트와 연결 해제됨");
+                    clientSocket.Shutdown(SocketShutdown.Both);     // 스트림 연결 종료(Send 및 Receive 불가)
+                    clientSocket.Close();                           // 소켓 자원 해제
                     return;
                 }
+                // 헤더를 일부만 받았을 경우, 나머지를 추가로 받아옴
+                else if (ReceiveSizeHeader < HEADER_SIZE) {
+                    clientSocket.Receive(headerBuffer, HEADER_SIZE, HEADER_SIZE - ReceiveSizeHeader, SocketFlags.None);
+                }
 
-                // 역직렬화: byte 배열을 string 객체 형태로 변환
-                string strEcho = Encoding.UTF8.GetString(bufferEcho);
-                Console.WriteLine("Server: " + strEcho + "\n");
-                */
+                // 헤더 역직렬화(바이트 배열 -> 정수) 후, 받아야 할 데이터의 크기 저장
+                short echoDataSize = IPAddress.NetworkToHostOrder(BitConverter.ToInt16(headerBuffer));
+
+                //////////////////////////////////////////////////////////////////////////////////////////////
+
+                // 실제 데이터를 얻는 과정
+                byte[] echoDataBuffer = new byte[echoDataSize];     // 데이터 버퍼
+                int echoTotalReceivedSize = 0;  // 지금까지 받은 데이터의 크기(Bytes)
+
+                // 모든 데이터를 받을 때까지, 반복해서 데이터 수신
+                while (echoTotalReceivedSize < echoDataSize) {
+                    int ReceiveSizeNow = clientSocket.Receive(echoDataBuffer, echoTotalReceivedSize, echoDataSize - echoTotalReceivedSize, SocketFlags.None);
+                    echoTotalReceivedSize += ReceiveSizeNow;
+                }
+
+                // 역직렬화: byte 배열을 객체 형태(문자열)로 변환
+                string echoStr = Encoding.UTF8.GetString(echoDataBuffer);
+                Console.WriteLine("Echo: " + str);
             }
         }
     }
