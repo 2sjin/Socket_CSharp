@@ -8,6 +8,24 @@ internal class Server {
     static readonly IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse("192.168.0.14"), 20000);
     const int HEADER_SIZE = 2;      // 헤더의 크기
 
+    // Echo 전송 메소드
+    static void SendEcho(Socket socket, string echoStr) {
+        // 직렬화: 객체(문자열, 정수 등)를 전송 가능한 byte 배열로 변환
+        byte[] echoStrBuffer = Encoding.UTF8.GetBytes(echoStr);         // 실제 데이터
+        byte[] echoDataSize = BitConverter.GetBytes(IPAddress.HostToNetworkOrder((short)echoStrBuffer.Length));     // 데이터의 크기
+        byte[] newBuffer = new byte[HEADER_SIZE + echoStrBuffer.Length];      // 2바이트 헤더를 추가한 새로운 버퍼
+
+        // 새로운 버퍼에 데이터 입력
+        // Array.Copy(복사할 배열, 시작 인덱스, 붙여넣을 배열, 시작 인덱스, 복사할 길이)
+        Array.Copy(echoDataSize, 0, newBuffer, 0, echoDataSize.Length);     // 헤더에 데이터의 크기 입력
+        Array.Copy(echoStrBuffer, 0, newBuffer, HEADER_SIZE, echoStrBuffer.Length);   // 데이터 입력
+
+        // 클라이언트로 데이터 전송(Echo)
+        socket.Send(newBuffer, SocketFlags.None);
+        return;
+    }
+
+    // Main 메소드
     static void Main(string[] args) {
         Console.WriteLine("Server Program\n\n");
 
@@ -72,20 +90,8 @@ internal class Server {
                     string str = Encoding.UTF8.GetString(dataBuffer);
                     Console.WriteLine("Client: " + str);
 
-                    //////////////////////////////////////////////////////////////////////////////////////////////
-
-                    // 직렬화: 객체(문자열, 정수 등)를 전송 가능한 byte 배열로 변환
-                    byte[] echoStrBuffer = Encoding.UTF8.GetBytes(str);         // 실제 데이터
-                    byte[] echoDataSize = BitConverter.GetBytes(IPAddress.HostToNetworkOrder((short)echoStrBuffer.Length));     // 데이터의 크기
-                    byte[] newBuffer = new byte[HEADER_SIZE + echoStrBuffer.Length];      // 2바이트 헤더를 추가한 새로운 버퍼
-
-                    // 새로운 버퍼에 데이터 입력
-                    // Array.Copy(복사할 배열, 시작 인덱스, 붙여넣을 배열, 시작 인덱스, 복사할 길이)
-                    Array.Copy(echoDataSize, 0, newBuffer, 0, echoDataSize.Length);     // 헤더에 데이터의 크기 입력
-                    Array.Copy(echoStrBuffer, 0, newBuffer, HEADER_SIZE, echoStrBuffer.Length);   // 데이터 입력
-
-                    // 클라이언트로 데이터 전송(Echo)
-                    clientSocket.Send(newBuffer, SocketFlags.None);
+                    // Client로 Echo 전송
+                    SendEcho(clientSocket, str);
                 }
             }
         }
