@@ -29,6 +29,8 @@ internal class Client {
                 // 문자열 없이 [Enter] 입력 시 프로그램 종료
                 if (str == "") {
                     Console.WriteLine("클라이언트 종료");
+                    clientSocket.Shutdown(SocketShutdown.Both);     // 스트림 연결 종료(Send 및 Receive 불가)
+                    clientSocket.Close();                           // 소켓 자원 해제
                     return;
                 }
 

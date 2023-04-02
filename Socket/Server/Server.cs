@@ -34,6 +34,8 @@ internal class Server {
                     // 헤더를 받지 않았으면 연결 종료
                     if (ReceiveSizeHeader <= 0) {
                         Console.WriteLine("클라이언트의 연결 종료");
+                        clientSocket.Shutdown(SocketShutdown.Both);     // 스트림 연결 종료(Send 및 Receive 불가)
+                        clientSocket.Close();                           // 소켓 자원 해제
                         return;
                     }
                     // 헤더를 일부만 받았을 경우, 나머지를 추가로 받아옴
