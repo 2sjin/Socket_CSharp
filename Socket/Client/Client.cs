@@ -14,6 +14,9 @@ internal class Client {
         // 클라이언트 소켓 생성
         // (주소 체계: IPv4), (소켓 타입: 연결 지향), (프로토콜 타입: TCP)
         using (Socket clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)) {
+            // SO_LINGER 활성화
+            // (소켓 Close가 호출되면, 출력 버퍼의 데이터를 비우고 상대 측에 비정상 종료를 알림)
+            clientSocket.LingerState = new LingerOption(true, 0);
 
             // 클라이언트가 서버에 연결 요청
             clientSocket.Connect(endPoint);

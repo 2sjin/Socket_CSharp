@@ -14,6 +14,8 @@ internal class Server {
         // 서버 소켓 생성
         // (주소 체계: IPv4), (소켓 타입: 연결 지향), (프로토콜 타입: TCP)
         using (Socket serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)) {
+            // 서버 소켓의 SO_REUSEADDR 활성화(Time-Wait 상태인 소켓의 포트를 다른 소켓이 사용할 수 있도록 설정)
+            serverSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
 
             // 서버 소켓에 IP, Port 할당
             serverSocket.Bind(endPoint);
@@ -24,6 +26,10 @@ internal class Server {
 
             // 연결 요청 수락, 데이터 통신에 사용할 소켓 생성
             using (Socket clientSocket = serverSocket.Accept()) {
+                // SO_LINGER 활성화
+                // (소켓 Close가 호출되면, 출력 버퍼의 데이터와 FIN 패킷을 전송함. 5초 안에 ACK 패킷을 받지 못하면 비정상 종료됨)
+                clientSocket.LingerState = new LingerOption(true, 0);
+
                 Console.WriteLine("Client 연결됨(" + clientSocket.RemoteEndPoint + ")");
 
                 while (true) {
