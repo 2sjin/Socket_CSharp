@@ -18,6 +18,9 @@ internal class Client {
             // (소켓 Close가 호출되면, 출력 버퍼의 데이터를 비우고 상대 측에 비정상 종료를 알림)
             clientSocket.LingerState = new LingerOption(true, 0);
 
+            // Nagle 알고리즘 ON (기본값)
+            clientSocket.NoDelay = false;   
+
             // 클라이언트가 서버에 연결 요청
             clientSocket.Connect(endPoint);
 
@@ -31,7 +34,7 @@ internal class Client {
 
                 // 문자열 없이 [Enter] 입력 시 프로그램 종료
                 if (str == "") {
-                    Console.WriteLine("클라이언트 종료");
+                    Console.WriteLine("클라이언트 프로그램 종료");
                     clientSocket.Shutdown(SocketShutdown.Both);     // 스트림 연결 종료(Send 및 Receive 불가)
                     clientSocket.Close();                           // 소켓 자원 해제
                     return;
@@ -48,7 +51,7 @@ internal class Client {
                 Array.Copy(strBuffer, 0, newBuffer, HEADER_SIZE, strBuffer.Length);   // 데이터 입력
 
                 // 서버로 데이터 전송
-                clientSocket.Send(newBuffer);
+                clientSocket.Send(newBuffer, SocketFlags.None);
 
                 /*
                 // 서버로부터 데이터 수신(Echo)
