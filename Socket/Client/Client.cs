@@ -19,25 +19,15 @@ internal class Client {
             Console.WriteLine("클라이언트와 연결 해제됨");
             socket.Shutdown(SocketShutdown.Both);     // 스트림 연결 종료(Send 및 Receive 불가)
             socket.Close();                           // 소켓 자원 해제
-            return null;
-        }
-        // 헤더를 일부만 받았을 경우, 나머지를 추가로 받아옴
-        else if (ReceiveSizeHeader < HEADER_SIZE) {
-            socket.Receive(headerBuffer, HEADER_SIZE, HEADER_SIZE - ReceiveSizeHeader, SocketFlags.None);
+            return "";
         }
 
-        // 헤더 역직렬화(바이트 배열 -> 정수) 후, 받아야 할 데이터의 크기 저장
+        // 역직렬화(바이트 배열 -> 정수) 후, 받아야 할 데이터의 크기 저장
         short echoDataSize = IPAddress.NetworkToHostOrder(BitConverter.ToInt16(headerBuffer));
 
-        // 실제 데이터를 얻는 과정
+        // Echo 데이터 수신
         byte[] echoDataBuffer = new byte[echoDataSize];     // 데이터 버퍼
-        int echoTotalReceivedSize = 0;  // 지금까지 받은 데이터의 크기(Bytes)
-
-        // 모든 데이터를 받을 때까지, 반복해서 데이터 수신
-        while (echoTotalReceivedSize < echoDataSize) {
-            int ReceiveSizeNow = socket.Receive(echoDataBuffer, echoTotalReceivedSize, echoDataSize - echoTotalReceivedSize, SocketFlags.None);
-            echoTotalReceivedSize += ReceiveSizeNow;
-        }
+        socket.Receive(echoDataBuffer, SocketFlags.None);
 
         // 역직렬화: byte 배열을 객체 형태(문자열)로 변환
         string echoStr = Encoding.UTF8.GetString(echoDataBuffer);
@@ -82,15 +72,10 @@ internal class Client {
                 // 직렬화: 객체(문자열, 정수 등)를 전송 가능한 byte 배열로 변환
                 byte[] strBuffer = Encoding.UTF8.GetBytes(str);         // 실제 데이터
                 byte[] dataSize = BitConverter.GetBytes(IPAddress.HostToNetworkOrder((short)strBuffer.Length));     // 데이터의 크기
-                byte[] newBuffer = new byte[HEADER_SIZE + strBuffer.Length];      // 2바이트 헤더를 추가한 새로운 버퍼
-
-                // 새로운 버퍼에 데이터 입력
-                // Array.Copy(복사할 배열, 시작 인덱스, 붙여넣을 배열, 시작 인덱스, 복사할 길이)
-                Array.Copy(dataSize, 0, newBuffer, 0, dataSize.Length);     // 헤더에 데이터의 크기 입력
-                Array.Copy(strBuffer, 0, newBuffer, HEADER_SIZE, strBuffer.Length);   // 데이터 입력
 
                 // 서버로 데이터 전송
-                clientSocket.Send(newBuffer, SocketFlags.None);
+                clientSocket.Send(dataSize, SocketFlags.None);
+                clientSocket.Send(strBuffer, SocketFlags.None);
 
                 // 서버로부터 Echo 수신
                 Console.WriteLine("Echo: " + ReceiveEcho(clientSocket));
