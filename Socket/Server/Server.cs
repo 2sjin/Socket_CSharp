@@ -6,7 +6,6 @@ namespace Server;
 
 internal class Server {
     static readonly IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse("192.168.0.14"), 20000);
-    const int HEADER_SIZE = 2;      // 헤더의 크기
 
     // Echo 전송 메소드
     static void SendEcho(Socket socket, string echoStr) {
@@ -20,8 +19,41 @@ internal class Server {
         return;
     }
 
+    // 비동기 방식으로 데이터를 수신하는 메소드
+    private static async void ReadAsync(object? sender) {
+        Socket clientSocket = (Socket)sender;
+
+        while (true) {
+            // 수신할 데이터의 크기 가져오기
+            byte[] sizeBuffer = new byte[2];
+            int sizeToReceive = await clientSocket.ReceiveAsync(sizeBuffer, SocketFlags.None);
+
+            // 수신할 데이터가 없으면 연결 종료
+            if (sizeToReceive <= 0) {
+                Console.WriteLine("클라이언트와 연결 해제됨");
+                clientSocket.Shutdown(SocketShutdown.Both);     // 스트림 연결 종료(Send 및 Receive 불가)
+                clientSocket.Close();                           // 소켓 자원 해제
+                return;
+            }
+
+            // 역직렬화(바이트 배열 -> 정수) 후, 수신할 데이터의 크기 저장
+            short dataSize = IPAddress.NetworkToHostOrder(BitConverter.ToInt16(sizeBuffer));
+
+            // 데이터 수신
+            byte[] dataBuffer = new byte[dataSize];     // 데이터 버퍼
+            int ReceiveSizeNow = await clientSocket.ReceiveAsync(dataBuffer, SocketFlags.None);
+
+            // 역직렬화: byte 배열을 객체 형태(문자열)로 변환
+            string str = Encoding.UTF8.GetString(dataBuffer);
+            Console.WriteLine("Client: " + str);
+
+            // Client로 Echo 전송
+            SendEcho(clientSocket, str);
+        }
+    }
+
     // Main 메소드
-    static void Main(string[] args) {
+    static async Task Main(string[] args) {
         Console.WriteLine("Server Program\n\n");
 
         // 서버 소켓 생성
@@ -39,7 +71,8 @@ internal class Server {
             serverSocket.Listen(20);
 
             // 연결 요청 수락, 데이터 통신에 사용할 소켓 생성
-            using (Socket clientSocket = serverSocket.Accept()) {
+            while (true) {
+                Socket clientSocket = await serverSocket.AcceptAsync();
                 Console.WriteLine("Client 연결됨(" + clientSocket.RemoteEndPoint + ")");
 
                 // SO_LINGER 활성화
@@ -49,35 +82,8 @@ internal class Server {
                 // Nagle 알고리즘 ON (기본값)
                 clientSocket.NoDelay = false;
 
-                while (true) {
-                    // 수신해야 할 데이터의 크기를 얻는 과정
-                    byte[] headerBuffer = new byte[HEADER_SIZE];                // 헤더 버퍼
-                    int ReceiveSizeHeader = clientSocket.Receive(headerBuffer, SocketFlags.None); // 클라이언트로부터 버퍼의 헤더 부분 받아오기
-
-                    // 헤더를 받지 않았으면 연결 종료
-                    if (ReceiveSizeHeader <= 0) {
-                        Console.WriteLine("클라이언트와 연결 해제됨");
-                        clientSocket.Shutdown(SocketShutdown.Both);     // 스트림 연결 종료(Send 및 Receive 불가)
-                        clientSocket.Close();                           // 소켓 자원 해제
-                        return;
-                    }
-
-                    // 역직렬화(바이트 배열 -> 정수) 후, 받아야 할 데이터의 크기 저장
-                    short dataSize = IPAddress.NetworkToHostOrder(BitConverter.ToInt16(headerBuffer));
-
-                    //////////////////////////////////////////////////////////////////////////////////////////////
-
-                    // 데이터 수신
-                    byte[] dataBuffer = new byte[dataSize];     // 데이터 버퍼
-                    int ReceiveSizeNow = clientSocket.Receive(dataBuffer, SocketFlags.None);
-
-                    // 역직렬화: byte 배열을 객체 형태(문자열)로 변환
-                    string str = Encoding.UTF8.GetString(dataBuffer);
-                    Console.WriteLine("Client: " + str);
-
-                    // Client로 Echo 전송
-                    SendEcho(clientSocket, str);
-                }
+                // TAP(작업 기반 비동기 패턴): 스레드풀의 작업 큐에 메소드를 대기시킴
+                ThreadPool.QueueUserWorkItem(ReadAsync, clientSocket);
             }
         }
     }

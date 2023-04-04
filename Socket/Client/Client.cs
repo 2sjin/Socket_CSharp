@@ -6,24 +6,23 @@ namespace Client;
 
 internal class Client {
     static readonly IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse("192.168.0.14"), 20000);
-    const int HEADER_SIZE = 2;      // 헤더의 크기
 
     // Echo 수신 메소드
     static string ReceiveEcho(Socket socket) {
-        // 수신해야 할 데이터의 크기를 얻는 과정
-        byte[] headerBuffer = new byte[HEADER_SIZE];                // 헤더 버퍼
-        int ReceiveSizeHeader = socket.Receive(headerBuffer); // 클라이언트로부터 버퍼의 헤더 부분 받아오기
+        // 수신할 데이터의 크기 가져오기
+        byte[] sizeBuffer = new byte[2];
+        int sizeToReceive = socket.Receive(sizeBuffer);
 
-        // 헤더를 받지 않았으면 연결 종료
-        if (ReceiveSizeHeader <= 0) {
+        // 수신할 데이터가 없으면 연결 종료
+        if (sizeToReceive <= 0) {
             Console.WriteLine("클라이언트와 연결 해제됨");
             socket.Shutdown(SocketShutdown.Both);     // 스트림 연결 종료(Send 및 Receive 불가)
             socket.Close();                           // 소켓 자원 해제
             return "";
         }
 
-        // 역직렬화(바이트 배열 -> 정수) 후, 받아야 할 데이터의 크기 저장
-        short echoDataSize = IPAddress.NetworkToHostOrder(BitConverter.ToInt16(headerBuffer));
+        // 역직렬화(바이트 배열 -> 정수) 후, 수신할 데이터의 크기 저장
+        short echoDataSize = IPAddress.NetworkToHostOrder(BitConverter.ToInt16(sizeBuffer));
 
         // Echo 데이터 수신
         byte[] echoDataBuffer = new byte[echoDataSize];     // 데이터 버퍼
@@ -37,7 +36,7 @@ internal class Client {
     }
 
     // Main 메소드
-    static void Main(string[] args) {
+    static async Task Main(string[] args) {
         Console.WriteLine("Client Program\n\n");
 
         // 클라이언트 소켓 생성
@@ -74,8 +73,8 @@ internal class Client {
                 byte[] dataSize = BitConverter.GetBytes(IPAddress.HostToNetworkOrder((short)strBuffer.Length));     // 데이터의 크기
 
                 // 서버로 데이터 전송
-                clientSocket.Send(dataSize, SocketFlags.None);
-                clientSocket.Send(strBuffer, SocketFlags.None);
+                await clientSocket.SendAsync(dataSize, SocketFlags.None);
+                await clientSocket.SendAsync(strBuffer, SocketFlags.None);
 
                 // 서버로부터 Echo 수신
                 Console.WriteLine("Echo: " + ReceiveEcho(clientSocket));
