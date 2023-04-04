@@ -11,10 +11,10 @@ internal class Server {
     static void SendEcho(Socket socket, string echoStr) {
         // 직렬화: 객체(문자열, 정수 등)를 전송 가능한 byte 배열로 변환
         byte[] echoStrBuffer = Encoding.UTF8.GetBytes(echoStr);         // 실제 데이터
-        byte[] echoDataSize = BitConverter.GetBytes(IPAddress.HostToNetworkOrder((short)echoStrBuffer.Length));     // 데이터의 크기
+        byte[] echoSizeBuffer = BitConverter.GetBytes(IPAddress.HostToNetworkOrder((short)echoStrBuffer.Length));     // 데이터의 크기
 
         // 클라이언트로 데이터 전송(Echo)
-        socket.Send(echoDataSize, SocketFlags.None);
+        socket.Send(echoSizeBuffer, SocketFlags.None);
         socket.Send(echoStrBuffer, SocketFlags.None);
         return;
     }
@@ -30,7 +30,7 @@ internal class Server {
 
             // 수신할 데이터가 없으면 연결 종료
             if (sizeToReceive <= 0) {
-                Console.WriteLine("클라이언트와 연결 해제됨");
+                Console.WriteLine("[클라이언트 연결 해제됨] " + clientSocket.RemoteEndPoint);
                 clientSocket.Shutdown(SocketShutdown.Both);     // 스트림 연결 종료(Send 및 Receive 불가)
                 clientSocket.Close();                           // 소켓 자원 해제
                 return;
@@ -43,9 +43,14 @@ internal class Server {
             byte[] dataBuffer = new byte[dataSize];     // 데이터 버퍼
             int ReceiveSizeNow = await clientSocket.ReceiveAsync(dataBuffer, SocketFlags.None);
 
+            // 클라이언트 이름 가져오기
+            byte[] nameBuffer = new byte[20];
+            await clientSocket.ReceiveAsync(nameBuffer, SocketFlags.None);
+
             // 역직렬화: byte 배열을 객체 형태(문자열)로 변환
             string str = Encoding.UTF8.GetString(dataBuffer);
-            Console.WriteLine("Client: " + str);
+            string name = Encoding.UTF8.GetString(nameBuffer);
+            Console.WriteLine("{0}({1}): {2}", name, clientSocket.RemoteEndPoint, str);
 
             // Client로 Echo 전송
             SendEcho(clientSocket, str);
@@ -73,7 +78,7 @@ internal class Server {
             // 연결 요청 수락, 데이터 통신에 사용할 소켓 생성
             while (true) {
                 Socket clientSocket = await serverSocket.AcceptAsync();
-                Console.WriteLine("Client 연결됨(" + clientSocket.RemoteEndPoint + ")");
+                Console.WriteLine("[클라이언트 연결됨] " + clientSocket.RemoteEndPoint);
 
                 // SO_LINGER 활성화
                 // (소켓 Close가 호출되면, 출력 버퍼의 데이터와 FIN 패킷을 전송함. 5초 안에 ACK 패킷을 받지 못하면 비정상 종료됨)

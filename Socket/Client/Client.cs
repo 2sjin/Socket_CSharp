@@ -6,6 +6,14 @@ namespace Client;
 
 internal class Client {
     static readonly IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse("192.168.0.14"), 20000);
+    static string clientName = "";
+
+    // 클라이언트의 이름 설정
+    static void setName() {
+        Console.Write("\n이름 입력: ");
+        clientName = Console.ReadLine();
+        Console.WriteLine();
+    }
 
     // Echo 수신 메소드
     static string ReceiveEcho(Socket socket) {
@@ -37,7 +45,9 @@ internal class Client {
 
     // Main 메소드
     static async Task Main(string[] args) {
-        Console.WriteLine("Client Program\n\n");
+        Console.WriteLine("Client Program");
+
+        setName();  // 클라이언트 이름 설정
 
         // 클라이언트 소켓 생성
         // (주소 체계: IPv4), (소켓 타입: 연결 지향), (프로토콜 타입: TCP)
@@ -69,12 +79,14 @@ internal class Client {
                 }
 
                 // 직렬화: 객체(문자열, 정수 등)를 전송 가능한 byte 배열로 변환
+                byte[] nameBuffer = Encoding.UTF8.GetBytes(clientName);         // 클라이언트 이름
                 byte[] strBuffer = Encoding.UTF8.GetBytes(str);         // 실제 데이터
-                byte[] dataSize = BitConverter.GetBytes(IPAddress.HostToNetworkOrder((short)strBuffer.Length));     // 데이터의 크기
+                byte[] sizeBuffer = BitConverter.GetBytes(IPAddress.HostToNetworkOrder((short)strBuffer.Length));     // 데이터의 크기
 
                 // 서버로 데이터 전송
-                await clientSocket.SendAsync(dataSize, SocketFlags.None);
+                await clientSocket.SendAsync(sizeBuffer, SocketFlags.None);
                 await clientSocket.SendAsync(strBuffer, SocketFlags.None);
+                await clientSocket.SendAsync(nameBuffer, SocketFlags.None);
 
                 // 서버로부터 Echo 수신
                 Console.WriteLine("Echo: " + ReceiveEcho(clientSocket));
